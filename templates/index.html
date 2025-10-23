@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X-ray Spectrum Generator (Ebel Model)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .slider-container { position: relative; }
+        .slider-tooltip {
+            position: absolute;
+            background-color: #333;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            white-space: nowrap;
+            bottom: 100%; 
+            left: 50%;
+            transform: translateX(-50%) translateY(-8px); 
+            opacity: 0;
+            transition: opacity 0.15s ease-in-out;
+            pointer-events: none; 
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-8">
+    <div class="container mx-auto max-w-5xl bg-white p-6 md:p-8 rounded-lg shadow-xl">
+        <header class="mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 text-center">X-ray Spectrum Generator</h1>
+            <p class="text-center text-gray-600 mt-1">Based on the Ebel Model (1999)</p>
+        </header>
+
+        <form id="spectrumForm" class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 mb-8">
+            <div class="md:col-span-1 space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-700 mb-3 border-b pb-2">Tube Parameters</h2>
+                <div>
+                    <label for="anode_material" class="block text-sm font-medium text-gray-700 mb-1">Anode Material:</label>
+                    <select id="anode_material" name="anode_material" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        {% for material in anode_materials %}
+                        <option value="{{ material }}" {% if material == default_params.anode_material %}selected{% endif %}>{{ material }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="slider-container">
+                    <label for="voltage_kv" class="block text-sm font-medium text-gray-700 mb-1">Tube Voltage (kV): <span id="voltage_kv_val" class="font-semibold text-indigo-600">{{ default_params.voltage_kv }}</span> kV</label>
+                    <input type="range" id="voltage_kv" name="voltage_kv" min="1" max="50" step="0.1" value="{{ default_params.voltage_kv }}" class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-indigo-600" oninput="document.getElementById('voltage_kv_val').textContent = this.value;">
+                </div>
+                <div>
+                    <label for="current_ma" class="block text-sm font-medium text-gray-700 mb-1">Tube Current (mA):</label>
+                    <input type="number" id="current_ma" name="current_ma" value="{{ default_params.current_ma }}" min="0.01" step="0.01" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                 <div>
+                    <label for="solid_angle_sr" class="block text-sm font-medium text-gray-700 mb-1">Solid Angle (sr):</label>
+                    <input type="number" id="solid_angle_sr" name="solid_angle_sr" value="{{ default_params.solid_angle_sr }}" min="1e-9" step="1e-7" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+            </div>
+
+            <div class="md:col-span-1 space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-700 mb-3 border-b pb-2">Geometry & Filter</h2>
+                <div>
+                    <label for="electron_angle_deg" class="block text-sm font-medium text-gray-700 mb-1">Electron Incidence Angle (° from surface):</label>
+                    <input type="number" id="electron_angle_deg" name="electron_angle_deg" value="{{ default_params.electron_angle_deg }}" min="1" max="90" step="0.1" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="xray_angle_deg" class="block text-sm font-medium text-gray-700 mb-1">X-ray Take-off Angle (° from surface):</label>
+                    <input type="number" id="xray_angle_deg" name="xray_angle_deg" value="{{ default_params.xray_angle_deg }}" min="1" max="90" step="0.1" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="be_window_thickness_mm" class="block text-sm font-medium text-gray-700 mb-1">Be Window Thickness (mm):</label>
+                    <input type="number" id="be_window_thickness_mm" name="be_window_thickness_mm" value="{{ default_params.be_window_thickness_mm }}" min="0" step="0.001" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="filter_type" class="block text-sm font-medium text-gray-700 mb-1">Filter:</label>
+                    <select id="filter_type" name="filter_type" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        {% for f_key, f_val in filters.items() %}
+                        <option value="{{ f_key }}" {% if f_key == default_params.filter_type %}selected{% endif %}>
+                            {{ f_key.replace("_", " ") }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="md:col-span-1 space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-700 mb-3 border-b pb-2">Detector Response</h2>
+                <div class="flex items-center">
+                    <input id="enable_detector_response" name="enable_detector_response" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mr-2" {% if default_params.enable_detector_response %}checked{% endif %}>
+                    <label for="enable_detector_response" class="block text-sm font-medium text-gray-700 mb-0">Enable Broadening</label>
+                </div>
+                <div id="detector_params_container" class="{{ 'hidden' if not default_params.enable_detector_response else '' }}">
+                    <div>
+                        <label for="detector_fwhm_ref_kev" class="block text-sm font-medium text-gray-700 mb-1">FWHM at Ref. Energy (keV):</label>
+                        <input type="number" id="detector_fwhm_ref_kev" name="detector_fwhm_ref_kev" value="{{ default_params.detector_fwhm_ref_kev }}" min="0.001" step="0.001" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="detector_energy_ref_kev" class="block text-sm font-medium text-gray-700 mb-1">Reference Energy for FWHM (keV):</label>
+                        <input type="number" id="detector_energy_ref_kev" name="detector_energy_ref_kev" value="{{ default_params.detector_energy_ref_kev }}" min="0.1" step="0.1" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                </div>
+            </div>
+        </form>
+        
+        <div class="flex flex-col sm:flex-row justify-center items-center space-y-3 sm:space-y-0 sm:space-x-4 mb-6">
+            <button type="button" id="generateBtn" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500 w-full sm:w-auto"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" /></svg>Generate Spectrum</button>
+            <button type="button" id="downloadCsvBtn" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 bg-gray-600 hover:bg-gray-700 focus:ring-gray-500 w-full sm:w-auto"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>Download CSV</button>
+            <button type="button" id="toggleScaleBtn" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 bg-gray-600 hover:bg-gray-700 focus:ring-gray-500 w-full sm:w-auto"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>Toggle Log Scale</button>
+        </div>
+
+        <div id="statusMessage" class="text-center mb-4 h-6"></div> 
+        <div class="bg-gray-50 p-2 md:p-4 rounded-lg shadow-inner h-[400px] sm:h-[500px] md:h-[600px]">
+            <canvas id="spectrumChart"></canvas>
+        </div>
+
+        <footer class="mt-8 text-center text-sm text-gray-500">
+            <p>Ensure <a href="https://github.com/tschoonj/xraylib" target="_blank" class="text-indigo-600 hover:underline">xraylib</a> is installed and correctly configured in the backend.</p>
+            <p>Spectrum calculation based on H. Ebel, X-Ray Spectrom. 28, 255-266 (1999).</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
