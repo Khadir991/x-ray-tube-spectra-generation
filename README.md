@@ -8,15 +8,18 @@ This project integrates `xraylib` for precise X-ray physics calculations.
 - Web interface built with Flask (`templates/` and `static/`).
 - Modular structure (`ebel_calculations.py` handles physics).
 
+  
+
+
+Then open http://127.0.0.1:5000/ in your browser.
+
 ## ⚙️ Requirements
 Install dependencies:
 ```bash
 pip install -r requirements.txt
-
+```
 ## 🚀 Run the app
 python app.py
-
-Then open http://127.0.0.1:5000/ in your browser.
 
 ## 📁 Project structure
 
